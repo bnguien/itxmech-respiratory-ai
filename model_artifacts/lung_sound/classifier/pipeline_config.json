@@ -1,0 +1,34 @@
+{
+  "preprocessing": {
+    "sr": 16000,
+    "bins": 128,
+    "frame_length": 25,
+    "frame_shift": 10,
+    "scale": 32768.0,
+    "mean": 15.41663,
+    "std": 6.55582,
+    "normalization": "(fbank-mean)/(2*std)",
+    "kaldi_other_parameters": "torchaudio defaults",
+    "bandpass": false,
+    "local_zscore": false,
+    "cyclic_repeat": false,
+    "resampling": "scipy_resample_poly",
+    "mono": "mean"
+  },
+  "labels": [
+    "normal",
+    "crackle",
+    "wheeze",
+    "both"
+  ],
+  "source_revision": "31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd",
+  "pooling": "masked_mean_max",
+  "patch_size": 16,
+  "batch_size": 1,
+  "inputs": {
+    "fbank": "float32 [1, T_pad, 128]",
+    "lengths": "int64 [1], s\u1ed1 Fbank frames th\u1eadt"
+  },
+  "padding": "zero; T_pad l\u00e0 b\u1ed9i s\u1ed1 patch_size",
+  "output": "float32 logits [1,4]; softmax b\u00ean ngo\u00e0i"
+}

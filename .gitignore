@@ -12,8 +12,12 @@ __pycache__/
 
 .DS_Store
 
-model_artifacts/*.pt
-model_artifacts/*.pth
-model_artifacts/*.onnx
-model_artifacts/*.ckpt
-model_artifacts/*.safetensors
+# AI model artifacts
+model_artifacts/**/*.onnx
+model_artifacts/**/*.pt
+model_artifacts/**/*.pth
+model_artifacts/**/*.ckpt
+model_artifacts/**/*.safetensors
+model_artifacts/**/*.npz
+model_artifacts/**/*.data
+model_artifacts/**/*.bin
