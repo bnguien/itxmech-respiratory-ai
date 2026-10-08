@@ -94,7 +94,7 @@ The model returns results for individual respiratory cycles rather than making a
 
 ## API
 
-Initial endpoints:
+Available endpoints:
 
 ```http
 GET /health
@@ -109,25 +109,33 @@ POST /api/v1/spo2/analyze
 
 ## Example Lung Sound Response
 
+Send a JSON request containing a UUID `recording_id` and an HTTP(S)
+`audio_url` signed URL pointing to the original WAV. Models load once at startup;
+downloaded files are deleted after each request. Invalid payloads return 422,
+download failures return 502, and pipeline failures return 500.
+
 ```json
 {
-  "recording_id": "uuid",
+  "recording_id": "76f05e2b-210c-47ce-8704-e641c4c25c64",
+  "boundaries": [0.52, 3.1],
   "cycles": [
     {
+      "index": 0,
       "start": 0.52,
       "end": 3.1,
-      "label": "crackles",
-      "confidence": 0.91
-    },
-    {
-      "start": 3.2,
-      "end": 6.05,
-      "label": "normal",
-      "confidence": 0.95
+      "duration": 2.58,
+      "status": "processed",
+      "label": "crackle",
+      "confidence": 0.91,
+      "probabilities": {"normal": 0.03, "crackle": 0.91, "wheeze": 0.04, "both": 0.02},
+      "n_frames": 256,
+      "reason": null
     }
   ]
 }
 ```
+
+Unprocessable cycles include a `reason`; prediction fields are `null`.
 
 ## Tech Stack
 
