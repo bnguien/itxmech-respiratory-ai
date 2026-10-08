@@ -10,7 +10,7 @@ def main() -> None:
 
     pipeline = LungSoundPipeline()
 
-    print("Pipeline loaded successfully ✅")
+    print("Pipeline loaded successfully")
 
     print("\n=== ANALYZE RECORDING ===")
 
