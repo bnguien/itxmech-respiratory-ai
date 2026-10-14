@@ -1,0 +1,25 @@
+.git
+.gitignore
+
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+notebooks
+tests
+
+# Model binaries are mounted at runtime
+model_artifacts
