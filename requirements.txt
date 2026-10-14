@@ -5,10 +5,8 @@ pydantic-settings
 python-dotenv
 
 numpy
-torch
 onnxruntime
 
 scipy
 librosa
 soundfile
-torchaudio
