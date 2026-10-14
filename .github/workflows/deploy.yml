@@ -1,0 +1,145 @@
+name: AI Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respicare-ai-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy AI to VPS
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "echo 'VPS SSH connection successful'"
+
+      - name: Deploy application
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'bash -s' <<'EOF'
+
+          set -euo pipefail
+
+          APP_DIR="/opt/respicare-ai"
+          IMAGE="respicare-ai:latest"
+          PREVIOUS_IMAGE="respicare-ai:previous"
+
+          echo "==> Entering application directory"
+          cd "$APP_DIR"
+
+          echo "==> Updating source code"
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+
+          echo "==> Saving previous Docker image"
+          if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            docker tag "$IMAGE" "$PREVIOUS_IMAGE"
+          fi
+
+          echo "==> Building new Docker image"
+          docker build \
+            --pull \
+            -t "$IMAGE" \
+            .
+
+          echo "==> Starting production container"
+          docker compose \
+            -f docker-compose.prod.yml \
+            up -d \
+            --force-recreate
+
+          echo "==> Waiting for AI service"
+
+          HEALTH_OK=false
+
+          for attempt in $(seq 1 24); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              http://127.0.0.1:8000/health \
+              >/dev/null; then
+
+              HEALTH_OK=true
+              break
+            fi
+
+            echo "Health check attempt $attempt/24 failed..."
+            sleep 5
+          done
+
+          if [ "$HEALTH_OK" = true ]; then
+            echo "==> Deployment successful"
+
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              http://127.0.0.1:8000/health
+
+            echo
+
+            docker image prune -f
+
+            exit 0
+          fi
+
+          echo "==> Deployment failed"
+          docker logs --tail 100 respicare-ai || true
+
+          echo "==> Attempting rollback"
+
+          if docker image inspect "$PREVIOUS_IMAGE" >/dev/null 2>&1; then
+            docker tag "$PREVIOUS_IMAGE" "$IMAGE"
+
+            docker compose \
+              -f docker-compose.prod.yml \
+              up -d \
+              --force-recreate
+
+            sleep 10
+
+            curl \
+              --fail \
+              http://127.0.0.1:8000/health || true
+
+            echo "==> Previous image restored"
+          else
+            echo "No previous image available for rollback"
+          fi
+
+          exit 1
+
+          EOF

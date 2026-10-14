@@ -1,0 +1,52 @@
+name: AI CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and verify AI image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t respicare-ai:ci \
+            .
+
+      - name: Verify Python source
+        run: |
+          docker run --rm \
+            respicare-ai:ci \
+            python -m compileall -q app
+
+      - name: Verify CPU-only PyTorch
+        run: |
+          docker run --rm \
+            respicare-ai:ci \
+            python -c "
+          import torch
+          import torchaudio
+          import onnxruntime
+
+          print('torch:', torch.__version__)
+          print('cuda version:', torch.version.cuda)
+          print('cuda available:', torch.cuda.is_available())
+          print('onnxruntime:', onnxruntime.__version__)
+
+          assert torch.version.cuda is None
+          assert torch.cuda.is_available() is False
+          "
